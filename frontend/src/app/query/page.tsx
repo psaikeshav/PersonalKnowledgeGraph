@@ -306,31 +306,6 @@ This hybrid approach is particularly effective for complex questions that requir
                     </div>
                 )}
 
-                {/* Example Questions */}
-                {!result && (
-                    <div style={{ maxWidth: '800px', margin: '0 auto var(--spacing-2xl)' }}>
-                        <p style={{
-                            color: 'var(--color-gray-500)',
-                            marginBottom: 'var(--spacing-sm)',
-                            fontSize: '0.9rem'
-                        }}>
-                            Try an example:
-                        </p>
-                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--spacing-sm)' }}>
-                            {exampleQuestions.map((q, i) => (
-                                <button
-                                    key={i}
-                                    className="btn btn-secondary"
-                                    style={{ fontSize: '0.85rem' }}
-                                    onClick={() => setQuestion(q)}
-                                >
-                                    {q}
-                                </button>
-                            ))}
-                        </div>
-                    </div>
-                )}
-
                 {/* Results */}
                 {result && (
                     <div style={{ maxWidth: '1000px', margin: '0 auto' }} className="fade-in">

@@ -321,18 +321,23 @@ class Neo4jClient:
     def create_document(
         self, 
         doc_id: str, 
-        filename: str
+        filename: str,
+        file_type: str = None
     ) -> Dict[str, Any]:
         """Create a document node for provenance tracking"""
+        if file_type is None:
+            file_type = filename.split(".")[-1].lower() if "." in filename else "unknown"
+        
         query = """
         MERGE (d:Document {id: $id})
         SET d.filename = $filename,
+            d.file_type = $file_type,
             d.upload_date = datetime()
         RETURN d
         """
         
         with self.session() as session:
-            result = session.run(query, {"id": doc_id, "filename": filename})
+            result = session.run(query, {"id": doc_id, "filename": filename, "file_type": file_type})
             record = result.single()
             return self._sanitize_record(dict(record["d"])) if record else None
     
@@ -368,6 +373,117 @@ class Neo4jClient:
         """Delete all nodes and relationships"""
         with self.driver.session() as session:
             session.run("MATCH (n) DETACH DELETE n")
+    
+    # ============================================================
+    # File Explorer Operations
+    # ============================================================
+    
+    def get_all_documents(self) -> List[Dict[str, Any]]:
+        """Get all document nodes"""
+        query = """
+        MATCH (d:Document)
+        RETURN d
+        ORDER BY d.upload_date DESC
+        """
+        
+        with self.session() as session:
+            result = session.run(query)
+            return [self._sanitize_record(dict(record["d"])) for record in result]
+    
+    def get_document(self, doc_id: str) -> Optional[Dict[str, Any]]:
+        """Get a specific document by ID"""
+        query = "MATCH (d:Document {id: $id}) RETURN d"
+        
+        with self.session() as session:
+            result = session.run(query, {"id": doc_id})
+            record = result.single()
+            return self._sanitize_record(dict(record["d"])) if record else None
+    
+    def get_doc_id_by_filename(self, filename: str) -> Optional[str]:
+        """Get document ID by filename"""
+        query = "MATCH (d:Document {filename: $filename}) RETURN d.id as id"
+        
+        with self.session() as session:
+            result = session.run(query, {"filename": filename})
+            record = result.single()
+            return record["id"] if record else None
+    
+    def get_entity_count_by_doc(self, doc_id: str) -> int:
+        """Get count of entities for a specific document"""
+        # Get the filename first
+        doc = self.get_document(doc_id)
+        if not doc:
+            return 0
+        
+        filename = doc.get("filename", "")
+        query = """
+        MATCH (e:Entity {source_doc: $filename})
+        RETURN count(e) as count
+        """
+        
+        with self.session() as session:
+            result = session.run(query, {"filename": filename})
+            record = result.single()
+            return record["count"] if record else 0
+    
+    def get_entities_by_doc(self, doc_id: str) -> List[Dict[str, Any]]:
+        """Get all entities for a specific document"""
+        doc = self.get_document(doc_id)
+        if not doc:
+            return []
+        
+        filename = doc.get("filename", "")
+        query = """
+        MATCH (e:Entity {source_doc: $filename})
+        RETURN e
+        """
+        
+        with self.session() as session:
+            result = session.run(query, {"filename": filename})
+            return [self._sanitize_record(dict(record["e"])) for record in result]
+    
+    def get_relationships_by_doc(self, doc_id: str) -> List[Dict[str, Any]]:
+        """Get all relationships for a specific document"""
+        doc = self.get_document(doc_id)
+        if not doc:
+            return []
+        
+        filename = doc.get("filename", "")
+        query = """
+        MATCH (source:Entity)-[r]->(target:Entity)
+        WHERE r.source_doc = $filename
+        RETURN r.id as id, r.relationship as relationship_type, 
+               source.name as source_name, target.name as target_name
+        """
+        
+        with self.session() as session:
+            result = session.run(query, {"filename": filename})
+            relationships = []
+            for record in result:
+                relationships.append({
+                    "id": record["id"],
+                    "relationship_type": record["relationship_type"],
+                    "source_name": record["source_name"],
+                    "target_name": record["target_name"]
+                })
+            return relationships
+    
+    def search_entities_by_name(self, query: str) -> List[Dict[str, Any]]:
+        """Search entities by name (case-insensitive partial match)"""
+        # Split query into words and search for any match
+        words = query.lower().split()
+        
+        cypher_query = """
+        MATCH (e:Entity)
+        WHERE any(word IN $words WHERE toLower(e.name) CONTAINS word)
+        RETURN e
+        LIMIT 50
+        """
+        
+        with self.session() as session:
+            result = session.run(cypher_query, {"words": words})
+            return [self._sanitize_record(dict(record["e"])) for record in result]
+
 
 # Singleton instance
 neo4j_client = Neo4jClient()

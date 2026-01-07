@@ -11,7 +11,7 @@ load_dotenv()
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api import upload, graph, query, admin
+from app.api import upload, graph, query, admin, files
 
 # Initialize FastAPI app
 app = FastAPI(
@@ -34,6 +34,7 @@ app.include_router(upload.router, prefix="/api", tags=["Upload"])
 app.include_router(graph.router, prefix="/api", tags=["Graph"])
 app.include_router(query.router, prefix="/api", tags=["Query"])
 app.include_router(admin.router, prefix="/api", tags=["Admin"])
+app.include_router(files.router, prefix="/api", tags=["Files"])
 
 
 @app.get("/")

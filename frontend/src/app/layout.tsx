@@ -53,6 +53,7 @@ function Navigation() {
                 <a href="/upload" className="navbar-link">Upload</a>
                 <a href="/graph" className="navbar-link">Graph</a>
                 <a href="/query" className="navbar-link">Query</a>
+                <a href="/files" className="navbar-link">My Files</a>
             </div>
         </nav>
     );

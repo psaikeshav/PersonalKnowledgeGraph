@@ -192,3 +192,44 @@ class BuildGraphResponse(BaseModel):
     entities_created: int
     relationships_created: int
     status: str
+
+
+# ============================================================
+# File Explorer Models
+# ============================================================
+
+class FileInfo(BaseModel):
+    """File metadata for listing"""
+    file_id: str
+    filename: str
+    file_type: str
+    upload_date: str
+    entity_count: int = 0
+    status: str = "complete"
+
+
+class FileSearchRequest(BaseModel):
+    """Request for AI file search"""
+    query: str = Field(..., description="Natural language search query")
+    top_k: int = Field(default=10, description="Number of files to return")
+    file_type: Optional[str] = Field(default=None, description="Filter by file type (pdf, docx, txt)")
+
+
+class FileMatch(BaseModel):
+    """A matched file with relevance info"""
+    file_id: str
+    filename: str
+    file_type: str
+    upload_date: str
+    relevance_score: float
+    matched_entities: List[str] = []
+    matched_relationships: List[str] = []
+    matched_chunks: List[Dict[str, Any]] = []
+    explanation: str
+
+
+class FileSearchResponse(BaseModel):
+    """Response from file search"""
+    query: str
+    total_matches: int
+    files: List[FileMatch]
